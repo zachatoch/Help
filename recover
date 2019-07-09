@@ -1,0 +1,54 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <cs50.h>
+#include "bmp.h"
+
+int main(int argc, char *argv[])
+{
+    int number = 22756;
+    
+    if(argc != 2)
+    {
+        fprintf(stderr, "Usage: ./recover image \n");
+        return 1;    
+    }
+    //assigning and checking validity of file
+    FILE *inptr = fopen(argv[1], "r");
+    if (inptr == NULL)
+    {
+        fprintf(stderr, "Could not open file.\n");
+        return 2;
+    }
+    
+    //Skipping over the FAT
+    fseek(inptr, 512, SEEK_CUR);
+    //Iterating over 512 byte blocks
+    for (int i = 0; i < number; i++)
+    {
+        char* outfile = 000;
+        FILE *outptr = fopen(outfile, "w");
+        //temporary memory
+        BYTE bits[512]; 
+        //reading block
+        fread(&bits, 512, 1, inptr);
+        //checking for Jpeg Signature
+        if (bits[0] == 0xff && bits[1] == 0xd8 && bits[2] == 0xff)
+        {
+            
+            fwrite(&bits, 512,1, outptr);
+        }
+        if (bits[511] != 0x00)
+        {
+            fread(&bits, 512, 1, inptr);
+            fwrite(&bits, 512,1, outptr);
+            outfile++;
+        }
+        if (bits[511] == 0x00)
+        {
+            outfile++;
+        }
+    }
+    return 0;
+    
+    
+}
