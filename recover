@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-    char* names[50] = {"000","001","002","003","004","005","006","007","008","009","010","011","012","013","014","015","016","017","018","019","020","021","022","023","024","025","026","027","028","029","030","031","032","033","034","035","036","037","038","039","040","041","042","043","044","045","046","047","048","049"};
+    char* names[50] = {"000.jpg","001.jpg","002.jpg","003.jpg","004.jpg","005.jpg","006.jpg","007.jpg","008.jpg","009.jpg","010.jpg","011.jpg","012.jpg","013.jpg","014.jpg","015.jpg","016.jpg","017.jpg","018.jpg","019.jpg","020.jpg","021.jpg","022.jpg","023.jpg","024.jpg","025.jpg","026.jpg","027.jpg","028.jpg","029.jpg","030.jpg","031.jpg","032.jpg","033.jpg","034.jpg","035.jpg","036.jpg","037.jpg","038.jpg","039.jpg","040.jpg","041.jpg","042.jpg","043.jpg","044.jpg","045.jpg","046.jpg","047.jpg","048.jpg","049.jpg"};
     int number = 22757;
     
     if(argc != 2)
@@ -23,27 +23,56 @@ int main(int argc, char *argv[])
     
     //Skipping over the FAT
     //Iterating over 512 byte blocks
+    
+    int x = 0;
+    bool endstop = true;
     for (int i = 0; i < number; i++)
     {
-        FILE *outptr = fopen(names[i], "w");
-        //temporary memory
-        BYTE bits[512]; 
-        //reading block
-        fread(&bits, 512, 1, inptr);
-        //checking for Jpeg Signature
-        if (bits[0] == 0xff && bits[1] == 0xd8 && bits[2] == 0xff)
+        FILE *outptr = fopen(names[x], "w");
+        if(endstop == true)
         {
-            
+            //temporary memory
+            BYTE bits[512]; 
+                //reading block
+            fread(&bits, 512, 1, inptr);
+            //checking for Jpeg Signature
+            if (bits[0] == 0xff && bits[1] == 0xd8 && bits[2] == 0xff)
+            {
+                 fwrite(&bits, sizeof(bits),1, outptr);
+            }
+            if (bits[511] != 0x00)
+            {
+                endstop = false;
+            }
+            else if (bits[511] == 0x00)
+            {
+                endstop = true;
+                fclose(outptr);
+                x++;
+                printf("%i\n", x);
+            }
+        }
+        else if (endstop == false)
+        {
+            //temporary memory
+            BYTE bits[512]; 
+                //reading block
+            fread(&bits, 512, 1, inptr);
+            //checking for Jpeg Signature
             fwrite(&bits, sizeof(bits),1, outptr);
+            if (bits[511] != 0x00)
+            {
+                endstop = false;
+            }
+            else if (bits[511] == 0x00)
+            {
+                endstop = true;
+                fclose(outptr);
+                x++;
+                printf("%i\n",x);
+            }
         }
-        if (bits[511] != 0x00)
-        {
-            fread(&bits, sizeof(bits), 1, inptr);
-            fwrite(&bits, sizeof(bits),1, outptr);
-        }
-        if (bits[511] == 0x00)
-        {
-        }
+        
     }
     return 0;
     
