@@ -24,53 +24,31 @@ int main(int argc, char *argv[])
     //Skipping over the FAT
     //Iterating over 512 byte blocks
     
-    int x = 0;
-    bool endstop = true;
+    int x = -1;
+    bool firstjpeg = false;
+    FILE *outptr;
     for (int i = 0; i < number; i++)
     {
-        FILE *outptr = fopen(names[x], "w");
-        if(endstop == true)
+        //temporary memory
+        byte bits[512]; 
+        //reading block
+        fread(&bits, 512, 1, inptr);
+        //checking for Jpeg Signature
+        if (bits[0] == 0xff && bits[1] == 0xd8 && bits[2] == 0xff && (bits[3] & 0xf0) == 0xe0)
         {
-            //temporary memory
-            BYTE bits[512]; 
-                //reading block
-            fread(&bits, 512, 1, inptr);
-            //checking for Jpeg Signature
-            if (bits[0] == 0xff && bits[1] == 0xd8 && bits[2] == 0xff)
+            if(firstjpeg == true)
             {
-                 fwrite(&bits, sizeof(bits),1, outptr);
-            }
-            if (bits[511] != 0x00)
-            {
-                endstop = false;
-            }
-            else if (bits[511] == 0x00)
-            {
-                endstop = true;
                 fclose(outptr);
-                x++;
-                printf("%i\n", x);
             }
-        }
-        else if (endstop == false)
-        {
-            //temporary memory
-            BYTE bits[512]; 
-                //reading block
-            fread(&bits, 512, 1, inptr);
-            //checking for Jpeg Signature
+            firstjpeg = true;
+            x++;
+            outptr = fopen(names[x], "w");
             fwrite(&bits, sizeof(bits),1, outptr);
-            if (bits[511] != 0x00)
-            {
-                endstop = false;
-            }
-            else if (bits[511] == 0x00)
-            {
-                endstop = true;
-                fclose(outptr);
-                x++;
-                printf("%i\n",x);
-            }
+             
+        }
+        else if (firstjpeg == true && x < 49)
+        {
+            fwrite(&bits, sizeof(bits),1, outptr);
         }
         
     }
