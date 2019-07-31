@@ -221,6 +221,7 @@ def quote():
         values = lookup(request.form.get("symbol"))
         if not values:
             return apology("stock does not exist", 400)
+        values["price"]=usd(values["price"])
         return render_template("quoted.html", values = values)
 
 
@@ -286,6 +287,8 @@ def sell():
     rows = db.execute("SELECT * FROM users WHERE id = :idx",
         idx=id)
     cash= rows[0]["cash"]
+
+
     if request.method == "GET":
         tickers = []
         for entry in db.execute("SELECT * FROM :idx",idx=id):
@@ -293,22 +296,31 @@ def sell():
             tickers.append(ticker)
         return render_template("sell.html",symbols=tickers)
 
-    elif request.method == "POST":
+
+
+
+    else:
         if not request.form.get("symbol"):
             return apology("must provide symbol", 400)
+
         if not request.form.get("shares"):
             return apology("must provide shares", 400)
+
         values = lookup(request.form.get("symbol"))
         if not values:
             return apology("stock does not exist", 400)
+
         try:
             int(request.form.get("shares"))
         except:
             return apology("invalid input, is not number",400)
+
         if int(request.form.get("shares")) < 0:
             return apology("invalid input, is less than zero",400)
+
         sharesreq = int(request.form.get("shares"))
         symbol = request.form.get("symbol")
+
 
         for entry in db.execute("SELECT * FROM :idx",idx=id):
             if entry["ticker"]==request.form.get("symbol"):
@@ -318,8 +330,6 @@ def sell():
                 name = str(values["name"])
                 price = round(float(values["price"]),2)
                 valued = sharesreq*price
-                if shares - sharesreq < 0:
-                    return apology("you are trying to sell more stock than you have",400)
                 newbal = round(cash+valued,2)
                 sell = [ticker,shares,price,sharesreq,valued,cash]
                 price = usd(price)
@@ -327,7 +337,30 @@ def sell():
                 cash = usd(cash)
                 newbal=usd(newbal)
                 renderinfosell = [ticker,shares,price,sharesreq,valued,cash,name,newbal]
-                return redirect("/confirmationsell")
+                if shares - sharesreq < 0:
+                    return apology("you are trying to sell more stock than you have",400)
+
+
+                newbal = sell[4]+sell[5]
+                shares = sell[1]-sell[3]
+                db.execute("UPDATE users SET cash = :balance WHERE id = :idx;",balance = newbal,idx=id)
+                rows = db.execute("SELECT * FROM :idx WHERE ticker = :symbol",
+                idx=id,symbol=sell[0])
+                name = id+"history"
+                if shares > 0:
+                    db.execute("UPDATE :idx SET amount = :share WHERE ticker = :symbol;",idx=id,share=shares,symbol=sell[0])
+                    db.execute("Insert INTO :id(state,ticker,amount,transactionprice,transactiontime) Values(:state,:symbol,:shares,:transactionprice,:transactiontime)",id=name,state="sell",symbol=sell[0],shares=sell[3],transactionprice=sell[4],transactiontime= datetime.now())
+                elif shares == 0:
+                    db.execute("DELETE FROM :idx WHERE ticker = :symbol",idx=id,symbol=sell[0])
+                    db.execute("Insert INTO :id(state,ticker,amount,transactionprice,transactiontime) Values(:state,:symbol,:shares,:transactionprice,:transactiontime)",id=name,state="sell",symbol=sell[0],shares=sell[3],transactionprice=sell[4],transactiontime= datetime.now())
+                return redirect("/")
+
+                #return redirect("/confirmationsell")
+
+
+        return apology("You don't own any of that stock",400)
+
+
 
 @app.route("/confirmationsell", methods=["POST","GET"])
 @login_required
